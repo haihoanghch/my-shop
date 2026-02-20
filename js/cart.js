@@ -1,14 +1,14 @@
 import { supabase, formatMoney } from "./supabase.js"
 
-const BANK_CODE = "970436"        // ví dụ Vietcombank
-const BANK_ACCOUNT = "0123456789"
+const BANK_CODE = "acb"
+const BANK_ACCOUNT = "134150399"
 
 let cart = JSON.parse(localStorage.getItem("cart")) || []
-let discountPercent = 0
 let finalTotal = 0
+let discountPercent = 0
 
 function saveCart(){
-  localStorage.setItem("cart", JSON.stringify(cart))
+  localStorage.setItem("cart",JSON.stringify(cart))
 }
 
 function updateBadge(){
@@ -23,22 +23,24 @@ export function addToCart(id,name,price){
   renderCart()
 }
 
-function removeItem(index){
-  cart.splice(index,1)
+function removeItem(i){
+  cart.splice(i,1)
   renderCart()
 }
+
+window.removeItem = removeItem
 
 export function renderCart(){
   let html=""
   let total=0
 
   cart.forEach((p,i)=>{
-    total+=p.price*p.qty
-    html+=`
-      <div class="cart-item">
+    total += p.price*p.qty
+    html += `
+      <div>
         ${p.name} x${p.qty}
         <b>${formatMoney(p.price*p.qty)}</b>
-        <button onclick="window.removeItem(${i})">✕</button>
+        <button onclick="removeItem(${i})">X</button>
       </div>
     `
   })
@@ -53,8 +55,6 @@ export function renderCart(){
   updateBadge()
 }
 
-window.removeItem = removeItem
-
 export async function applyDiscount(){
   const code = document.getElementById("discountCode").value.trim()
   if(!code) return
@@ -67,8 +67,7 @@ export async function applyDiscount(){
     .single()
 
   if(error || !data) return alert("Mã sai")
-
-  if(new Date(data.expiry_date) < new Date())
+  if(new Date(data.expiry_date)<new Date())
     return alert("Mã hết hạn")
 
   discountPercent = data.percent
@@ -76,17 +75,15 @@ export async function applyDiscount(){
 }
 
 export async function submitOrder(){
-  const name = document.getElementById("name").value.trim()
-  const phone = document.getElementById("phone").value.trim()
-  const address = document.getElementById("address").value.trim()
 
-  if(!name || !phone || !address)
+  const name=document.getElementById("name").value.trim()
+  const phone=document.getElementById("phone").value.trim()
+  const address=document.getElementById("address").value.trim()
+
+  if(!name||!phone||!address)
     return alert("Nhập đủ thông tin")
 
-  if(!/^0[0-9]{9}$/.test(phone))
-    return alert("SĐT không hợp lệ")
-
-  const orderCode = "ORD"+Date.now()
+  const orderCode="ORD"+Date.now()
 
   const {data:order,error} = await supabase
     .from("orders")
@@ -119,14 +116,25 @@ export async function submitOrder(){
 }
 
 function generateQR(orderCode){
-  const qrUrl = `https://img.vietqr.io/image/${BANK_CODE}-${BANK_ACCOUNT}-compact2.png?amount=${finalTotal}&addInfo=${orderCode}`
-
-  const deeplink = `https://img.vietqr.io/image/${BANK_CODE}-${BANK_ACCOUNT}-compact2.png?amount=${finalTotal}&addInfo=${orderCode}`
+  const qrUrl =
+  `https://img.vietqr.io/image/${BANK_CODE}-${BANK_ACCOUNT}-compact2.png?amount=${finalTotal}&addInfo=${orderCode}`
 
   document.getElementById("qrBox").innerHTML=`
-    <h3>Quét QR để thanh toán</h3>
+    <h3>Quét QR thanh toán</h3>
     <img src="${qrUrl}" width="220"/>
     <p>Nội dung: <b>${orderCode}</b></p>
-    <a href="${deeplink}" target="_blank" class="pay-btn">Mở app ngân hàng</a>
+
+    <button onclick="mockPay('${orderCode}')" 
+      style="background:green;margin-top:10px">
+      ✅ Giả lập thanh toán
+    </button>
   `
+}
+
+window.mockPay = async (orderCode)=>{
+  await fetch("http://localhost:3000/mock-payment",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({orderCode})
+  })
 }
