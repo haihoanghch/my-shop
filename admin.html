@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Admin</title></head>
+<body>
+<h2>Danh sách đơn hàng</h2>
+<div id="orders"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const supabase=createClient("YOUR_SUPABASE_URL","YOUR_ANON_KEY");
+
+async function loadOrders(){
+const {data}=await supabase.from("orders").select("*");
+let html="";
+data.forEach(o=>{
+html+=`<div>
+Khách: ${o.customer_name} |
+SĐT: ${o.phone} |
+Tổng: ${o.total_price}
+</div><hr>`;
+});
+document.getElementById("orders").innerHTML=html;
+}
+
+loadOrders();
+</script>
+</body>
+</html>
