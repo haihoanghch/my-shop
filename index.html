@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Shop</title>
+
 <style>
 body{font-family:Arial;margin:0;background:#f4f6f9}
 header{background:#111;color:white;padding:15px;display:flex;justify-content:space-between}
@@ -12,17 +13,20 @@ header{background:#111;color:white;padding:15px;display:flex;justify-content:spa
 .card{background:white;padding:15px;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.1)}
 .card img{width:100%;border-radius:8px}
 button{background:#111;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer}
+button:hover{opacity:.8}
 .cart{background:white;padding:20px;margin-top:30px;border-radius:10px}
+.cart-item{display:flex;justify-content:space-between;margin-bottom:8px}
+.total{font-weight:bold;margin-top:10px}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);align-items:center;justify-content:center}
+.modal-box{background:white;padding:25px;border-radius:10px;width:350px}
+input,textarea{width:100%;padding:8px;margin-bottom:10px}
 </style>
 </head>
+
 <body>
 
 <header>
 <div>🛒 My Shop</div>
-<div>
-<a href="login.html" style="color:white;margin-right:15px">Login</a>
-<a href="admin.html" style="color:white">Admin</a>
-</div>
 </header>
 
 <div class="container">
@@ -33,10 +37,22 @@ button{background:#111;color:white;border:none;padding:8px 12px;border-radius:5p
 <div class="cart">
 <h2>Giỏ hàng</h2>
 <div id="cartItems"></div>
-<div id="total"></div>
-<button onclick="checkout()">Đặt hàng</button>
+<div class="total" id="total"></div>
+<button onclick="openModal()">Đặt hàng</button>
 </div>
 
+</div>
+
+<!-- Modal -->
+<div id="orderModal" class="modal">
+  <div class="modal-box">
+    <h3>Thông tin đặt hàng</h3>
+    <input id="customerName" placeholder="Họ và tên">
+    <input id="customerPhone" placeholder="Số điện thoại">
+    <textarea id="customerAddress" placeholder="Địa chỉ"></textarea>
+    <button onclick="submitOrder()">Xác nhận</button>
+    <button onclick="closeModal()" style="background:#999;margin-top:5px">Huỷ</button>
+  </div>
 </div>
 
 <script type="module">
@@ -47,76 +63,101 @@ const supabase = createClient(
 "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2ZmNub3pweGdla3lvdnlsd2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjkzODQsImV4cCI6MjA4NzAwNTM4NH0.oDOznylKm_I1-RwHx7Xqk2LCy_tIbZzjgwhCEPeDhNw"
 );
 
+
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
 function saveCart(){
-localStorage.setItem("cart",JSON.stringify(cart));
+  localStorage.setItem("cart",JSON.stringify(cart));
 }
 
 function renderCart(){
-let html="";
-let total=0;
-cart.forEach((item,i)=>{
-total+=item.price*item.qty;
-html+=`<div>
-${item.name} x${item.qty} = ${item.price*item.qty} VNĐ
-<button onclick="removeItem(${i})">X</button>
-</div>`;
-});
-document.getElementById("cartItems").innerHTML=html;
-document.getElementById("total").innerHTML="<b>Tổng: "+total+" VNĐ</b>";
-saveCart();
+  let html="";
+  let total=0;
+
+  cart.forEach((item,i)=>{
+    total+=item.price*item.qty;
+    html+=`
+    <div class="cart-item">
+      <span>${item.name} x${item.qty}</span>
+      <span>
+        ${item.price*item.qty} VNĐ
+        <button onclick="removeItem(${i})">X</button>
+      </span>
+    </div>`;
+  });
+
+  document.getElementById("cartItems").innerHTML=html;
+  document.getElementById("total").innerHTML="Tổng: "+total+" VNĐ";
+  saveCart();
 }
 
 window.removeItem=function(i){
-cart.splice(i,1);
-renderCart();
+  cart.splice(i,1);
+  renderCart();
 }
 
 window.addToCart=function(id,name,price){
-let found=cart.find(p=>p.id===id);
-if(found){found.qty++}
-else{cart.push({id,name,price,qty:1})}
-renderCart();
+  let found=cart.find(p=>p.id===id);
+  if(found){found.qty++}
+  else{cart.push({id,name,price,qty:1})}
+  renderCart();
 }
 
 async function loadProducts(){
-const {data}=await supabase.from("products").select("*");
-let html="";
-data.forEach(p=>{
-html+=`
-<div class="card">
-${p.image_url?`<img src="${p.image_url}">`:""}
-<h3>${p.name}</h3>
-<p><b>${p.price} VNĐ</b></p>
-<p>${p.specs||""}</p>
-<button onclick="addToCart('${p.id}','${p.name}',${p.price})">
-Thêm vào giỏ
-</button>
-</div>`;
-});
-document.getElementById("products").innerHTML=html;
+  const {data}=await supabase.from("products").select("*");
+  let html="";
+  data.forEach(p=>{
+    html+=`
+    <div class="card">
+      ${p.image_url?`<img src="${p.image_url}">`:""}
+      <h3>${p.name}</h3>
+      <p><b>${p.price} VNĐ</b></p>
+      <p>${p.specs||""}</p>
+      <button onclick="addToCart('${p.id}','${p.name}',${p.price})">
+      Thêm vào giỏ
+      </button>
+    </div>`;
+  });
+  document.getElementById("products").innerHTML=html;
 }
 
-window.checkout=async function(){
-if(cart.length===0){alert("Giỏ hàng trống");return;}
-const name=prompt("Tên:");
-const phone=prompt("SĐT:");
-const address=prompt("Địa chỉ:");
-
-for(let item of cart){
-await supabase.from("orders").insert([{
-customer_name:name,
-phone,
-address,
-product_id:item.id,
-quantity:item.qty,
-total_price:item.price*item.qty
-}]);
+window.openModal=function(){
+  if(cart.length===0){alert("Giỏ hàng trống");return;}
+  document.getElementById("orderModal").style.display="flex";
 }
-alert("Đặt hàng thành công!");
-cart=[];
-renderCart();
+
+window.closeModal=function(){
+  document.getElementById("orderModal").style.display="none";
+}
+
+window.submitOrder=async function(){
+  const name=document.getElementById("customerName").value.trim();
+  const phone=document.getElementById("customerPhone").value.trim();
+  const address=document.getElementById("customerAddress").value.trim();
+
+  if(!name||!phone||!address){
+    alert("Vui lòng nhập đầy đủ thông tin");
+    return;
+  }
+
+  const orderCode="ORD-"+Date.now();
+
+  for(let item of cart){
+    await supabase.from("orders").insert([{
+      order_code:orderCode,
+      customer_name:name,
+      phone,
+      address,
+      product_id:item.id,
+      quantity:item.qty,
+      total_price:item.price*item.qty
+    }]);
+  }
+
+  alert("Đặt hàng thành công! Mã đơn: "+orderCode);
+  cart=[];
+  renderCart();
+  closeModal();
 }
 
 renderCart();
