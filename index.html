@@ -1,61 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Shop</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-</head>
-<body>
-  <h1>Danh sách sản phẩm</h1>
-  <div id="products"></div>
 
-<script>
-const supabaseUrl = "https://wvfcnozpxgekyovylwjw.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2ZmNub3pweGdla3lvdnlsd2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjkzODQsImV4cCI6MjA4NzAwNTM4NH0.oDOznylKm_I1-RwHx7Xqk2LCy_tIbZzjgwhCEPeDhNw";
+  <!-- Supabase JS v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-async function loadProducts() {
-  const { data } = await supabase.from("products").select("*");
-
-  const container = document.getElementById("products");
-  container.innerHTML = "";
-
-  data.forEach(p => {
-    container.innerHTML += `
-      <div style="border:1px solid #ccc; padding:10px; margin:10px;">
-        <img src="${p.image_url}" width="150"/>
-        <h3>${p.name}</h3>
-        <p>Giá: ${p.price} VNĐ</p>
-        <p>${p.specs}</p>
-        <button onclick="orderProduct('${p.id}', ${p.price})">
-          Đặt hàng
-        </button>
-      </div>
-    `;
-  });
-}
-
-async function orderProduct(productId, price) {
-  const name = prompt("Tên của bạn:");
-  const phone = prompt("Số điện thoại:");
-  const address = prompt("Địa chỉ:");
-  const quantity = 1;
-
-  await supabase.from("orders").insert([
-    {
-      customer_name: name,
-      phone: phone,
-      address: address,
-      product_id: productId,
-      quantity: quantity,
-      total_price: price * quantity
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 1000px;
+      margin: auto;
+      padding: 20px;
     }
-  ]);
 
-  alert("Đặt hàng thành công!");
-}
+    .product {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+    }
 
-loadProducts();
-</script>
+    img {
+      max-width: 200px;
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: black;
+      color: white;
+      padding: 8px 15px;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Danh sách sản phẩm</h1>
+  <div id="products">Đang tải sản phẩm...</div>
+
+  <script>
+    const { createClient } = supabase;
+
+    const supabaseClient = createClient(
+      "YOUR_SUPABASE_URL",
+      "YOUR_ANON_PUBLIC_KEY"
+    );
+
+    async function loadProducts() {
+      const { data, error } = await supabaseClient
+        .from("products")
+        .select("*");
+
+      if (error) {
+        console.error("Lỗi:", error);
+        document.getElementById("products").innerHTML = "Lỗi tải sản phẩm";
+        return;
+      }
+
+      const container = document.getElementById("products");
+      container.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        container.innerHTML = "Không có sản phẩm";
+        return;
+      }
+
+      data.forEach(p => {
+        const productHTML = `
+          <div class="product">
+            ${p.image_url ? `<img src="${p.image_url}" />` : ""}
+            <h3>${p.name}</h3>
+            <p><strong>Giá:</strong> ${p.price} VNĐ</p>
+            <p>${p.specs || ""}</p>
+            <button onclick="orderProduct('${p.id}', ${p.price})">
+              Đặt hàng
+            </button>
+          </div>
+        `;
+
+        container.innerHTML += productHTML;
+      });
+    }
+
+    async function orderProduct(productId, price) {
+      const name = prompt("Tên của bạn:");
+      if (!name) return;
+
+      const phone = prompt("Số điện thoại:");
+      if (!phone) return;
+
+      const address = prompt("Địa chỉ:");
+      if (!address) return;
+
+      const quantity = 1;
+
+      const { error } = await supabaseClient
+        .from("orders")
+        .insert([
+          {
+            customer_name: name,
+            phone: phone,
+            address: address,
+            product_id: productId,
+            quantity: quantity,
+            total_price: price * quantity
+          }
+        ]);
+
+      if (error) {
+        alert("Có lỗi khi đặt hàng!");
+        console.error(error);
+      } else {
+        alert("Đặt hàng thành công!");
+      }
+    }
+
+    loadProducts();
+  </script>
+
 </body>
 </html>
