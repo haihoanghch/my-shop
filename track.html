@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>Tra cứu đơn</title></head>
+<body>
+<h2>Tra cứu đơn hàng</h2>
+<input id="code" placeholder="Nhập mã đơn">
+<button onclick="search()">Tìm</button>
+<div id="result"></div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+const supabase=createClient("YOUR_SUPABASE_URL","YOUR_ANON_KEY");
+
+window.search=async()=>{
+const code=document.getElementById("code").value;
+const {data}=await supabase.from("orders")
+.select("*").eq("order_code",code).single();
+if(!data)return alert("Không tìm thấy");
+document.getElementById("result").innerHTML=
+`Trạng thái: ${data.status}<br>Tổng tiền: ${data.total_amount}`;
+}
+</script>
+</body>
+</html>
