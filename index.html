@@ -1,191 +1,126 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Shop</title>
-
-  <style>
-    body {
-      font-family: Arial;
-      max-width: 1100px;
-      margin: auto;
-      padding: 20px;
-      background: #f5f5f5;
-    }
-
-    h1 {
-      text-align: center;
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 20px;
-    }
-
-    .card {
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-
-    .card img {
-      width: 100%;
-      border-radius: 8px;
-    }
-
-    button {
-      background: black;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      margin-top: 8px;
-      cursor: pointer;
-      border-radius: 5px;
-    }
-
-    button:hover {
-      opacity: 0.8;
-    }
-
-    .cart {
-      margin-top: 40px;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    }
-
-    .cart-item {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
-    .total {
-      font-weight: bold;
-      margin-top: 15px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Shop</title>
+<style>
+body{font-family:Arial;margin:0;background:#f4f6f9}
+header{background:#111;color:white;padding:15px;display:flex;justify-content:space-between}
+.container{max-width:1100px;margin:auto;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px}
+.card{background:white;padding:15px;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.1)}
+.card img{width:100%;border-radius:8px}
+button{background:#111;color:white;border:none;padding:8px 12px;border-radius:5px;cursor:pointer}
+.cart{background:white;padding:20px;margin-top:30px;border-radius:10px}
+</style>
 </head>
-
 <body>
 
-<h1>🛒 My Shop</h1>
+<header>
+<div>🛒 My Shop</div>
+<div>
+<a href="login.html" style="color:white;margin-right:15px">Login</a>
+<a href="admin.html" style="color:white">Admin</a>
+</div>
+</header>
+
+<div class="container">
 
 <h2>Sản phẩm</h2>
 <div class="grid" id="products"></div>
 
 <div class="cart">
-  <h2>Giỏ hàng</h2>
-  <div id="cartItems"></div>
-  <div class="total" id="totalPrice">Tổng: 0 VNĐ</div>
-  <button onclick="checkout()">Đặt hàng</button>
+<h2>Giỏ hàng</h2>
+<div id="cartItems"></div>
+<div id="total"></div>
+<button onclick="checkout()">Đặt hàng</button>
+</div>
+
 </div>
 
 <script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-  const supabaseClient = createClient(
-    "https://wvfcnozpxgekyovylwjw.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind2ZmNub3pweGdla3lvdnlsd2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0MjkzODQsImV4cCI6MjA4NzAwNTM4NH0.oDOznylKm_I1-RwHx7Xqk2LCy_tIbZzjgwhCEPeDhNw"
-  );
+const supabase = createClient(
+"YOUR_SUPABASE_URL",
+"YOUR_ANON_KEY"
+);
 
-  let cart = [];
+let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-  async function loadProducts() {
-    const { data } = await supabaseClient
-      .from("products")
-      .select("*");
+function saveCart(){
+localStorage.setItem("cart",JSON.stringify(cart));
+}
 
-    const container = document.getElementById("products");
-    container.innerHTML = "";
+function renderCart(){
+let html="";
+let total=0;
+cart.forEach((item,i)=>{
+total+=item.price*item.qty;
+html+=`<div>
+${item.name} x${item.qty} = ${item.price*item.qty} VNĐ
+<button onclick="removeItem(${i})">X</button>
+</div>`;
+});
+document.getElementById("cartItems").innerHTML=html;
+document.getElementById("total").innerHTML="<b>Tổng: "+total+" VNĐ</b>";
+saveCart();
+}
 
-    data.forEach(p => {
-      container.innerHTML += `
-        <div class="card">
-          ${p.image_url ? `<img src="${p.image_url}" />` : ""}
-          <h3>${p.name}</h3>
-          <p><strong>${p.price} VNĐ</strong></p>
-          <p>${p.specs || ""}</p>
-          <button onclick="addToCart('${p.id}','${p.name}',${p.price})">
-            Thêm vào giỏ
-          </button>
-        </div>
-      `;
-    });
-  }
+window.removeItem=function(i){
+cart.splice(i,1);
+renderCart();
+}
 
-  window.addToCart = function(id, name, price) {
-    const existing = cart.find(item => item.id === id);
+window.addToCart=function(id,name,price){
+let found=cart.find(p=>p.id===id);
+if(found){found.qty++}
+else{cart.push({id,name,price,qty:1})}
+renderCart();
+}
 
-    if (existing) {
-      existing.quantity++;
-    } else {
-      cart.push({ id, name, price, quantity: 1 });
-    }
+async function loadProducts(){
+const {data}=await supabase.from("products").select("*");
+let html="";
+data.forEach(p=>{
+html+=`
+<div class="card">
+${p.image_url?`<img src="${p.image_url}">`:""}
+<h3>${p.name}</h3>
+<p><b>${p.price} VNĐ</b></p>
+<p>${p.specs||""}</p>
+<button onclick="addToCart('${p.id}','${p.name}',${p.price})">
+Thêm vào giỏ
+</button>
+</div>`;
+});
+document.getElementById("products").innerHTML=html;
+}
 
-    renderCart();
-  }
+window.checkout=async function(){
+if(cart.length===0){alert("Giỏ hàng trống");return;}
+const name=prompt("Tên:");
+const phone=prompt("SĐT:");
+const address=prompt("Địa chỉ:");
 
-  function renderCart() {
-    const container = document.getElementById("cartItems");
-    container.innerHTML = "";
+for(let item of cart){
+await supabase.from("orders").insert([{
+customer_name:name,
+phone,
+address,
+product_id:item.id,
+quantity:item.qty,
+total_price:item.price*item.qty
+}]);
+}
+alert("Đặt hàng thành công!");
+cart=[];
+renderCart();
+}
 
-    let total = 0;
-
-    cart.forEach((item, index) => {
-      total += item.price * item.quantity;
-
-      container.innerHTML += `
-        <div class="cart-item">
-          <span>${item.name} x${item.quantity}</span>
-          <span>
-            ${item.price * item.quantity} VNĐ
-            <button onclick="removeItem(${index})">X</button>
-          </span>
-        </div>
-      `;
-    });
-
-    document.getElementById("totalPrice").innerText =
-      "Tổng: " + total + " VNĐ";
-  }
-
-  window.removeItem = function(index) {
-    cart.splice(index, 1);
-    renderCart();
-  }
-
-  window.checkout = async function() {
-    if (cart.length === 0) {
-      alert("Giỏ hàng trống!");
-      return;
-    }
-
-    const name = prompt("Tên của bạn:");
-    const phone = prompt("Số điện thoại:");
-    const address = prompt("Địa chỉ:");
-
-    for (let item of cart) {
-      await supabaseClient.from("orders").insert([{
-        customer_name: name,
-        phone: phone,
-        address: address,
-        product_id: item.id,
-        quantity: item.quantity,
-        total_price: item.price * item.quantity
-      }]);
-    }
-
-    alert("Đặt hàng thành công!");
-    cart = [];
-    renderCart();
-  }
-
-  loadProducts();
+renderCart();
+loadProducts();
 </script>
 
 </body>
